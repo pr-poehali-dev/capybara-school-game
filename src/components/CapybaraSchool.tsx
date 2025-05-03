@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Question {
   id: number;
@@ -31,9 +32,17 @@ interface Lesson {
   description: string;
   questions: Question[];
   teacherId: string;
+  minGrade: number;
 }
 
-type Grade = 2 | 3 | 4 | 5;
+interface SchoolClass {
+  id: string;
+  name: string;
+  description: string;
+  level: number; // 1-4 младшие, 5-9 средние, 10-11 старшие
+}
+
+type Grade = 1 | 2 | 3 | 4 | 5;
 
 interface GradeRecord {
   lesson: string;
@@ -41,6 +50,7 @@ interface GradeRecord {
   grade: Grade;
   date: string;
   teacherName: string;
+  className: string;
 }
 
 const CapybaraSchool: React.FC = () => {
@@ -48,9 +58,27 @@ const CapybaraSchool: React.FC = () => {
   const [score, setScore] = useState<number>(0);
   const [showResults, setShowResults] = useState<boolean>(false);
   const [showHint, setShowHint] = useState<Record<number, boolean>>({});
-  const [level, setLevel] = useState<number>(1);
   const [currentLesson, setCurrentLesson] = useState<string>("biology");
+  const [currentClass, setCurrentClass] = useState<string>("1");
   const [grades, setGrades] = useState<GradeRecord[]>([]);
+
+  // Классы в школе капибар
+  const schoolClasses: SchoolClass[] = [
+    // Младшие классы
+    { id: "1", name: "1 класс", description: "Первый год обучения", level: 1 },
+    { id: "2", name: "2 класс", description: "Второй год обучения", level: 2 },
+    { id: "3", name: "3 класс", description: "Третий год обучения", level: 3 },
+    { id: "4", name: "4 класс", description: "Четвертый год обучения", level: 4 },
+    // Средние классы
+    { id: "5", name: "5 класс", description: "Пятый год обучения", level: 5 },
+    { id: "6", name: "6 класс", description: "Шестой год обучения", level: 6 },
+    { id: "7", name: "7 класс", description: "Седьмой год обучения", level: 7 },
+    { id: "8", name: "8 класс", description: "Восьмой год обучения", level: 8 },
+    { id: "9", name: "9 класс", description: "Девятый год обучения", level: 9 },
+    // Старшие классы
+    { id: "10", name: "10 класс", description: "Десятый год обучения", level: 10 },
+    { id: "11", name: "11 класс", description: "Выпускной класс", level: 11 },
+  ];
 
   // Учителя школы капибар
   const teachers: Record<string, Teacher> = {
@@ -84,6 +112,7 @@ const CapybaraSchool: React.FC = () => {
       name: "Биология капибар",
       description: "Знания о жизни капибар в природе",
       teacherId: "ibragim",
+      minGrade: 2,
       questions: [
         { id: 1, question: "Как называется группа капибар?", answer: "стадо", hint: "Так же называют группу коров или лошадей" },
         { id: 2, question: "Сколько детёнышей обычно рождается у капибары?", answer: "4", hint: "Это число между 3 и 5" },
@@ -96,6 +125,7 @@ const CapybaraSchool: React.FC = () => {
       name: "Математика капибар",
       description: "Решение задач про капибар и их еду",
       teacherId: "maria",
+      minGrade: 2,
       questions: [
         { id: 1, question: "Если у капибары 8 яблок, и она отдала другим 3, сколько яблок осталось?", answer: "5", hint: "Нужно вычесть 3 из 8" },
         { id: 2, question: "Капибара съедает 2 кг травы за день. Сколько кг травы нужно на 3 дня?", answer: "6", hint: "Умножь 2 на 3" },
@@ -108,6 +138,7 @@ const CapybaraSchool: React.FC = () => {
       name: "География капибар",
       description: "Изучение мест обитания капибар",
       teacherId: "petr",
+      minGrade: 2,
       questions: [
         { id: 1, question: "Как называется самая большая река Южной Америки, где живут капибары?", answer: "амазонка", hint: "Самая полноводная река в мире" },
         { id: 2, question: "В какой стране живёт самая большая популяция капибар?", answer: "бразилия", hint: "Страна знаменита карнавалами и футболом" },
@@ -122,10 +153,15 @@ const CapybaraSchool: React.FC = () => {
   };
 
   const calculateGrade = (percentage: number): Grade => {
+    // В старших классах (10-11) можно получить "кол" (1)
+    const currentClassObj = schoolClasses.find(c => c.id === currentClass);
+    const isHighClass = currentClassObj && currentClassObj.level >= 10;
+    
     if (percentage >= 90) return 5;
     if (percentage >= 70) return 4;
     if (percentage >= 50) return 3;
-    return 2;
+    if (percentage >= 30) return 2;
+    return isHighClass ? 1 : 2; // "кол" только для старших классов
   };
 
   const checkAnswers = () => {
@@ -143,13 +179,15 @@ const CapybaraSchool: React.FC = () => {
     
     // Добавляем новую оценку
     const currentTeacher = teachers[lessons[currentLesson].teacherId];
+    const currentClassName = schoolClasses.find(c => c.id === currentClass)?.name || "";
     
     const newGrade: GradeRecord = {
       lesson: lessons[currentLesson].name,
       score: newScore,
       grade: calculateGrade(newScore),
       date: new Date().toLocaleDateString('ru-RU'),
-      teacherName: currentTeacher.name
+      teacherName: currentTeacher.name,
+      className: currentClassName
     };
     
     setGrades(prev => [newGrade, ...prev]);
@@ -173,6 +211,17 @@ const CapybaraSchool: React.FC = () => {
       setCurrentLesson(lessonId);
     }
   };
+  
+  const changeClass = (classId: string) => {
+    if (showResults || Object.keys(userAnswers).length > 0) {
+      if (confirm('Вы действительно хотите сменить класс? Текущие ответы будут сброшены.')) {
+        resetGame();
+        setCurrentClass(classId);
+      }
+    } else {
+      setCurrentClass(classId);
+    }
+  };
 
   const toggleHint = (id: number) => {
     setShowHint(prev => ({ ...prev, [id]: !prev[id] }));
@@ -180,12 +229,13 @@ const CapybaraSchool: React.FC = () => {
 
   const getResultMessage = () => {
     const currentTeacher = teachers[lessons[currentLesson].teacherId];
+    const grade = calculateGrade(score);
     
-    if (score >= 90) return `${currentTeacher.name}: "Отлично! Ты настоящий знаток капибар!"`;
-    if (score >= 70) return `${currentTeacher.name}: "Очень хорошо! Ты многое знаешь о капибарах!"`;
-    if (score >= 50) return `${currentTeacher.name}: "Неплохо! Ты на пути к тому, чтобы стать экспертом!"`;
-    if (score >= 30) return `${currentTeacher.name}: "Хорошее начало! Попробуй ещё раз!"`;
-    return `${currentTeacher.name}: "Не расстраивайся! В следующий раз получится лучше!"`;
+    if (grade === 5) return `${currentTeacher.name}: "Отлично! Ты настоящий знаток капибар!"`;
+    if (grade === 4) return `${currentTeacher.name}: "Очень хорошо! Ты многое знаешь о капибарах!"`;
+    if (grade === 3) return `${currentTeacher.name}: "Неплохо! Ты на пути к тому, чтобы стать экспертом!"`;
+    if (grade === 2) return `${currentTeacher.name}: "Хорошее начало! Попробуй ещё раз!"`;
+    return `${currentTeacher.name}: "Кол! Придётся остаться после уроков на дополнительные занятия!"`;
   };
 
   const getGradeEmoji = (grade: Grade) => {
@@ -194,12 +244,21 @@ const CapybaraSchool: React.FC = () => {
       case 4: return "✨";
       case 3: return "⭐";
       case 2: return "📚";
+      case 1: return "😢";
       default: return "";
     }
   };
 
   const currentQuestions = lessons[currentLesson].questions;
   const currentTeacher = teachers[lessons[currentLesson].teacherId];
+  const currentClassObj = schoolClasses.find(c => c.id === currentClass);
+  
+  // Определяем категорию класса
+  const getClassCategory = (level: number): string => {
+    if (level >= 10) return "Старшие классы";
+    if (level >= 5) return "Средние классы";
+    return "Младшие классы";
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -208,7 +267,7 @@ const CapybaraSchool: React.FC = () => {
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl font-bold text-amber-800">Школа Капибар</CardTitle>
             <Badge variant="outline" className="bg-amber-100 text-amber-800">
-              Уровень {level}
+              {currentClassObj?.name || "1 класс"}
             </Badge>
           </div>
           <CardDescription className="text-amber-700">
@@ -217,6 +276,50 @@ const CapybaraSchool: React.FC = () => {
         </CardHeader>
         
         <CardContent className="pt-6">
+          {/* Выбор класса */}
+          <div className="mb-6">
+            <h3 className="text-amber-800 font-medium mb-2">Выбери свой класс:</h3>
+            <Select value={currentClass} onValueChange={changeClass}>
+              <SelectTrigger className="border-amber-200 focus:border-amber-400">
+                <SelectValue placeholder="Выбери класс" />
+              </SelectTrigger>
+              <SelectContent>
+                {/* Группируем классы по категориям */}
+                <div className="font-semibold text-amber-700 px-2 py-1">Младшие классы</div>
+                {schoolClasses.filter(c => c.level <= 4).map(schoolClass => (
+                  <SelectItem key={schoolClass.id} value={schoolClass.id}>
+                    {schoolClass.name}
+                  </SelectItem>
+                ))}
+                
+                <div className="font-semibold text-amber-700 px-2 py-1 mt-2">Средние классы</div>
+                {schoolClasses.filter(c => c.level >= 5 && c.level <= 9).map(schoolClass => (
+                  <SelectItem key={schoolClass.id} value={schoolClass.id}>
+                    {schoolClass.name}
+                  </SelectItem>
+                ))}
+                
+                <div className="font-semibold text-amber-700 px-2 py-1 mt-2">Старшие классы</div>
+                {schoolClasses.filter(c => c.level >= 10).map(schoolClass => (
+                  <SelectItem key={schoolClass.id} value={schoolClass.id}>
+                    {schoolClass.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {currentClassObj && (
+              <div className="mt-2 text-sm text-amber-700">
+                {currentClassObj.description} • {getClassCategory(currentClassObj.level)}
+                {currentClassObj.level >= 10 && (
+                  <div className="mt-1 text-xs text-red-500 font-medium">
+                    В старших классах можно получить оценку "кол" (1)!
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
           <Tabs 
             defaultValue={currentLesson}
             onValueChange={changeLesson}
@@ -266,13 +369,15 @@ const CapybaraSchool: React.FC = () => {
               score >= 90 ? 'bg-green-50 border-green-200' : 
               score >= 70 ? 'bg-emerald-50 border-emerald-200' :
               score >= 50 ? 'bg-amber-50 border-amber-200' :
-              'bg-red-50 border-red-200'
+              score >= 30 ? 'bg-red-50 border-red-200' :
+              'bg-red-100 border-red-300'
             }`}>
               <AlertTitle className={
                 score >= 90 ? 'text-green-800' : 
                 score >= 70 ? 'text-emerald-800' :
                 score >= 50 ? 'text-amber-800' :
-                'text-red-800'
+                score >= 30 ? 'text-red-800' :
+                'text-red-900'
               }>
                 Твой результат: {score}% - Оценка: {calculateGrade(score)} {getGradeEmoji(calculateGrade(score))}
               </AlertTitle>
@@ -280,7 +385,8 @@ const CapybaraSchool: React.FC = () => {
                 score >= 90 ? 'text-green-700' : 
                 score >= 70 ? 'text-emerald-700' :
                 score >= 50 ? 'text-amber-700' :
-                'text-red-700'
+                score >= 30 ? 'text-red-700' :
+                'text-red-800'
               }>
                 {getResultMessage()}
               </AlertDescription>
@@ -366,7 +472,9 @@ const CapybaraSchool: React.FC = () => {
                   <div>
                     <span className="font-medium text-amber-900">{grade.lesson}</span>
                     <span className="text-sm text-amber-600 ml-2">({grade.date})</span>
-                    <div className="text-xs text-amber-600">Учитель: {grade.teacherName}</div>
+                    <div className="text-xs text-amber-600">
+                      Учитель: {grade.teacherName} • Класс: {grade.className}
+                    </div>
                   </div>
                   <div className="flex items-center">
                     <span className="text-amber-800 mr-2">{grade.score}%</span>
@@ -375,7 +483,8 @@ const CapybaraSchool: React.FC = () => {
                         ${grade.grade === 5 ? 'bg-green-100 text-green-800 border-green-300' : 
                           grade.grade === 4 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 
                           grade.grade === 3 ? 'bg-amber-100 text-amber-800 border-amber-300' : 
-                          'bg-red-100 text-red-800 border-red-300'}
+                          grade.grade === 2 ? 'bg-red-100 text-red-800 border-red-300' :
+                          'bg-red-200 text-red-900 border-red-400'}
                       `}
                     >
                       {grade.grade} {getGradeEmoji(grade.grade)}
