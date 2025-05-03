@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Question {
   id: number;
@@ -15,11 +16,21 @@ interface Question {
   hint: string;
 }
 
+interface Teacher {
+  id: string;
+  name: string;
+  role: string;
+  description: string;
+  avatarUrl?: string;
+  quote?: string;
+}
+
 interface Lesson {
   id: string;
   name: string;
   description: string;
   questions: Question[];
+  teacherId: string;
 }
 
 type Grade = 2 | 3 | 4 | 5;
@@ -29,6 +40,7 @@ interface GradeRecord {
   score: number;
   grade: Grade;
   date: string;
+  teacherName: string;
 }
 
 const CapybaraSchool: React.FC = () => {
@@ -40,12 +52,38 @@ const CapybaraSchool: React.FC = () => {
   const [currentLesson, setCurrentLesson] = useState<string>("biology");
   const [grades, setGrades] = useState<GradeRecord[]>([]);
 
+  // Учителя школы капибар
+  const teachers: Record<string, Teacher> = {
+    ibragim: {
+      id: "ibragim",
+      name: "Ибрагим Каламанси",
+      role: "Учитель биологии",
+      description: "Специалист по капибарам с 15-летним опытом исследований в естественной среде обитания",
+      quote: "Понять капибару — значит понять гармонию природы!"
+    },
+    maria: {
+      id: "maria",
+      name: "Мария Водолеева",
+      role: "Учитель математики",
+      description: "Учитель с творческим подходом к математике, превращает цифры в увлекательные истории",
+      quote: "Математика везде, даже в повседневной жизни капибар!"
+    },
+    petr: {
+      id: "petr",
+      name: "Пётр Следопытов",
+      role: "Учитель географии",
+      description: "Путешественник, исследовавший все континенты, где обитают капибары",
+      quote: "Каждый водоём — это новый мир для исследования!"
+    }
+  };
+
   // Уроки-контрольные для школы капибар
   const lessons: Record<string, Lesson> = {
     biology: {
       id: "biology",
       name: "Биология капибар",
       description: "Знания о жизни капибар в природе",
+      teacherId: "ibragim",
       questions: [
         { id: 1, question: "Как называется группа капибар?", answer: "стадо", hint: "Так же называют группу коров или лошадей" },
         { id: 2, question: "Сколько детёнышей обычно рождается у капибары?", answer: "4", hint: "Это число между 3 и 5" },
@@ -57,6 +95,7 @@ const CapybaraSchool: React.FC = () => {
       id: "math",
       name: "Математика капибар",
       description: "Решение задач про капибар и их еду",
+      teacherId: "maria",
       questions: [
         { id: 1, question: "Если у капибары 8 яблок, и она отдала другим 3, сколько яблок осталось?", answer: "5", hint: "Нужно вычесть 3 из 8" },
         { id: 2, question: "Капибара съедает 2 кг травы за день. Сколько кг травы нужно на 3 дня?", answer: "6", hint: "Умножь 2 на 3" },
@@ -68,6 +107,7 @@ const CapybaraSchool: React.FC = () => {
       id: "geography",
       name: "География капибар",
       description: "Изучение мест обитания капибар",
+      teacherId: "petr",
       questions: [
         { id: 1, question: "Как называется самая большая река Южной Америки, где живут капибары?", answer: "амазонка", hint: "Самая полноводная река в мире" },
         { id: 2, question: "В какой стране живёт самая большая популяция капибар?", answer: "бразилия", hint: "Страна знаменита карнавалами и футболом" },
@@ -102,11 +142,14 @@ const CapybaraSchool: React.FC = () => {
     setScore(newScore);
     
     // Добавляем новую оценку
+    const currentTeacher = teachers[lessons[currentLesson].teacherId];
+    
     const newGrade: GradeRecord = {
       lesson: lessons[currentLesson].name,
       score: newScore,
       grade: calculateGrade(newScore),
-      date: new Date().toLocaleDateString('ru-RU')
+      date: new Date().toLocaleDateString('ru-RU'),
+      teacherName: currentTeacher.name
     };
     
     setGrades(prev => [newGrade, ...prev]);
@@ -136,11 +179,13 @@ const CapybaraSchool: React.FC = () => {
   };
 
   const getResultMessage = () => {
-    if (score >= 90) return "Отлично! Ты настоящий знаток капибар!";
-    if (score >= 70) return "Очень хорошо! Ты многое знаешь о капибарах!";
-    if (score >= 50) return "Неплохо! Ты на пути к тому, чтобы стать экспертом!";
-    if (score >= 30) return "Хорошее начало! Попробуй ещё раз!";
-    return "Не расстраивайся! В следующий раз получится лучше!";
+    const currentTeacher = teachers[lessons[currentLesson].teacherId];
+    
+    if (score >= 90) return `${currentTeacher.name}: "Отлично! Ты настоящий знаток капибар!"`;
+    if (score >= 70) return `${currentTeacher.name}: "Очень хорошо! Ты многое знаешь о капибарах!"`;
+    if (score >= 50) return `${currentTeacher.name}: "Неплохо! Ты на пути к тому, чтобы стать экспертом!"`;
+    if (score >= 30) return `${currentTeacher.name}: "Хорошее начало! Попробуй ещё раз!"`;
+    return `${currentTeacher.name}: "Не расстраивайся! В следующий раз получится лучше!"`;
   };
 
   const getGradeEmoji = (grade: Grade) => {
@@ -154,6 +199,7 @@ const CapybaraSchool: React.FC = () => {
   };
 
   const currentQuestions = lessons[currentLesson].questions;
+  const currentTeacher = teachers[lessons[currentLesson].teacherId];
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -188,11 +234,31 @@ const CapybaraSchool: React.FC = () => {
               ))}
             </TabsList>
             
-            {Object.values(lessons).map(lesson => (
-              <TabsContent key={lesson.id} value={lesson.id}>
-                <p className="mb-4 text-amber-800">{lesson.description}</p>
-              </TabsContent>
-            ))}
+            {Object.values(lessons).map(lesson => {
+              const teacher = teachers[lesson.teacherId];
+              return (
+                <TabsContent key={lesson.id} value={lesson.id}>
+                  <div className="bg-amber-50 p-4 rounded-lg mb-6 flex items-start gap-4">
+                    <Avatar className="w-16 h-16 border-2 border-amber-300">
+                      <AvatarFallback className="bg-amber-200 text-amber-800 text-xl">
+                        {teacher.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="text-amber-900 font-bold text-lg">{teacher.name}</h3>
+                      <p className="text-amber-700 text-sm mb-1">{teacher.role}</p>
+                      <p className="text-amber-800 mb-2">{teacher.description}</p>
+                      {teacher.quote && (
+                        <blockquote className="border-l-2 border-amber-300 pl-3 italic text-amber-700">
+                          "{teacher.quote}"
+                        </blockquote>
+                      )}
+                    </div>
+                  </div>
+                  <p className="mb-4 text-amber-800">{lesson.description}</p>
+                </TabsContent>
+              );
+            })}
           </Tabs>
           
           {showResults && (
@@ -236,7 +302,7 @@ const CapybaraSchool: React.FC = () => {
                 />
                 
                 {showHint[q.id] && (
-                  <p className="text-sm text-amber-600 italic mt-1">Подсказка: {q.hint}</p>
+                  <p className="text-sm text-amber-600 italic mt-1">Подсказка от {currentTeacher.name}: {q.hint}</p>
                 )}
                 
                 {!showResults && (
@@ -300,6 +366,7 @@ const CapybaraSchool: React.FC = () => {
                   <div>
                     <span className="font-medium text-amber-900">{grade.lesson}</span>
                     <span className="text-sm text-amber-600 ml-2">({grade.date})</span>
+                    <div className="text-xs text-amber-600">Учитель: {grade.teacherName}</div>
                   </div>
                   <div className="flex items-center">
                     <span className="text-amber-800 mr-2">{grade.score}%</span>
